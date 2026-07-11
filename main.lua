@@ -14,7 +14,7 @@ function love.load()
     
     -- Состояние приложения
     state = {
-        currentScreen = "projects", -- projects, scene_editor, object_editor, categories, blocks_select
+        currentScreen = "projects",
         selectedProjectId = 1,
         selectedObjectId = nil,
         selectedCategory = nil,
@@ -70,7 +70,7 @@ function love.load()
         }
     }
     
-    -- Шаблоны блоков (РУССКИЙ ЯЗЫК)
+    -- Шаблоны блоков
     blockTemplates = {
         event = {
             { type = "when_start", label = "При старте игры", category = "event" },
@@ -105,14 +105,33 @@ function love.load()
     generateLuaCode()
 end
 
+-- Функция для рисования закругленных прямоугольников
+function roundedRect(mode, x, y, w, h, radius, segments)
+    if radius > w/2 then radius = w/2 end
+    if radius > h/2 then radius = h/2 end
+    if radius < 0 then radius = 0 end
+    if segments == nil then segments = 10 end
+    
+    love.graphics.push()
+    love.graphics.translate(x + radius, y + radius)
+    love.graphics.rectangle(mode, 0, 0, w - radius*2, h - radius*2)
+    love.graphics.translate(w - radius*2, 0)
+    love.graphics.arc(mode, 0, 0, radius, -math.pi/2, 0, segments)
+    love.graphics.translate(0, h - radius*2)
+    love.graphics.arc(mode, 0, 0, radius, 0, math.pi/2, segments)
+    love.graphics.translate(-(w - radius*2), 0)
+    love.graphics.arc(mode, 0, 0, radius, math.pi/2, math.pi, segments)
+    love.graphics.translate(0, -(h - radius*2))
+    love.graphics.arc(mode, 0, 0, radius, math.pi, 3*math.pi/2, segments)
+    love.graphics.pop()
+end
+
 function love.update(dt)
-    -- Обновление состояния
 end
 
 function love.draw()
     love.graphics.setBackgroundColor(0.08, 0.12, 0.16)
     
-    -- Рисуем интерфейс
     if state.currentScreen == "projects" then
         drawProjectsScreen()
     elseif state.currentScreen == "scene_editor" then
@@ -125,7 +144,6 @@ function love.draw()
         drawBlocksSelect()
     end
     
-    -- Рисуем панель кода справа
     drawCodePanel()
 end
 
@@ -151,7 +169,7 @@ function drawProjectsScreen()
         else
             love.graphics.setColor(0.12, 0.18, 0.25)
         end
-        love.graphics.rectangle("roundrect", 20, y, 710, 60, 8, 8)
+        roundedRect("fill", 20, y, 710, 60, 8)
         
         love.graphics.setColor(1, 1, 1)
         love.graphics.setFont(mediumFont)
@@ -189,11 +207,10 @@ function drawSceneEditor()
         else
             love.graphics.setColor(0.12, 0.18, 0.25)
         end
-        love.graphics.rectangle("roundrect", 20, y, 710, 60, 8, 8)
+        roundedRect("fill", 20, y, 710, 60, 8)
         
-        -- Цветной квадратик
         love.graphics.setColor(obj.color[1], obj.color[2], obj.color[3])
-        love.graphics.rectangle("fill", 40, y + 10, 40, 40, 4, 4)
+        love.graphics.rectangle("fill", 40, y + 10, 40, 40)
         
         love.graphics.setColor(1, 1, 1)
         love.graphics.setFont(mediumFont)
@@ -206,9 +223,8 @@ function drawSceneEditor()
         y = y + 80
     end
     
-    -- Кнопка добавления объекта
     love.graphics.setColor(0.2, 0.4, 0.6)
-    love.graphics.rectangle("roundrect", 20, 750, 150, 40, 8, 8)
+    roundedRect("fill", 20, 750, 150, 40, 8)
     love.graphics.setColor(1, 1, 1)
     love.graphics.setFont(mediumFont)
     love.graphics.print("Новый объект", 35, 760)
@@ -222,7 +238,7 @@ function drawObjectEditor()
     love.graphics.rectangle("fill", 0, 0, 750, 800)
     
     love.graphics.setColor(obj.color[1], obj.color[2], obj.color[3])
-    love.graphics.rectangle("fill", 20, 15, 40, 40, 4, 4)
+    love.graphics.rectangle("fill", 20, 15, 40, 40)
     
     love.graphics.setColor(1, 1, 1)
     love.graphics.setFont(largeFont)
@@ -244,9 +260,8 @@ function drawObjectEditor()
         end
     end
     
-    -- Кнопка добавления блока
     love.graphics.setColor(0.9, 0.6, 0.1)
-    love.graphics.rectangle("roundrect", 20, 750, 150, 40, 8, 8)
+    roundedRect("fill", 20, 750, 150, 40, 8)
     love.graphics.setColor(1, 1, 1)
     love.graphics.setFont(mediumFont)
     love.graphics.print("Добавить блок", 35, 760)
@@ -262,19 +277,16 @@ function drawScriptBlock(script, index, y)
     }
     local color = colors[category] or {0.5, 0.5, 0.5}
     
-    -- Фон блока
     love.graphics.setColor(color[1], color[2], color[3], 0.3)
-    love.graphics.rectangle("roundrect", 20, y, 710, 65, 8, 8)
+    roundedRect("fill", 20, y, 710, 65, 8)
     
     love.graphics.setColor(color[1], color[2], color[3])
-    love.graphics.rectangle("fill", 20, y, 6, 65, 3, 3)
+    love.graphics.rectangle("fill", 20, y, 6, 65)
     
-    -- Заголовок
     love.graphics.setColor(1, 1, 1)
     love.graphics.setFont(smallFont)
     love.graphics.print(script.label, 40, y + 8)
     
-    -- Значения блока
     love.graphics.setColor(0.8, 0.8, 0.8)
     love.graphics.setFont(smallFont)
     local info = ""
@@ -288,10 +300,10 @@ function drawScriptBlock(script, index, y)
     end
     love.graphics.print(info, 40, y + 32)
     
-    -- Кнопка удаления
     love.graphics.setColor(0.8, 0.2, 0.2)
-    love.graphics.rectangle("roundrect", 700, y + 10, 25, 25, 4, 4)
+    roundedRect("fill", 700, y + 10, 25, 25, 4)
     love.graphics.setColor(1, 1, 1)
+    love.graphics.setFont(smallFont)
     love.graphics.print("X", 708, y + 12)
 end
 
@@ -316,7 +328,7 @@ function drawCategoriesScreen()
                      love.mouse.getY() > y and love.mouse.getY() < y + 70
         
         love.graphics.setColor(cat.color[1], cat.color[2], cat.color[3], hover and 0.3 or 0.15)
-        love.graphics.rectangle("roundrect", 20, y, 710, 70, 10, 10)
+        roundedRect("fill", 20, y, 710, 70, 10)
         
         love.graphics.setColor(cat.color[1], cat.color[2], cat.color[3])
         love.graphics.setFont(mediumFont)
@@ -342,7 +354,7 @@ function drawBlocksSelect()
                      love.mouse.getY() > y and love.mouse.getY() < y + 55
         
         love.graphics.setColor(0.2, 0.3, 0.4, hover and 1 or 0.5)
-        love.graphics.rectangle("roundrect", 20, y, 710, 55, 8, 8)
+        roundedRect("fill", 20, y, 710, 55, 8)
         
         love.graphics.setColor(1, 1, 1)
         love.graphics.setFont(mediumFont)
@@ -353,7 +365,6 @@ function drawBlocksSelect()
 end
 
 function drawCodePanel()
-    -- Правая панель с кодом
     love.graphics.setColor(0.06, 0.08, 0.1)
     love.graphics.rectangle("fill", 760, 0, 440, 800)
     
@@ -365,12 +376,11 @@ function drawCodePanel()
     love.graphics.print("main.lua", 780, 12)
     
     love.graphics.setColor(0.2, 0.5, 0.2)
-    love.graphics.rectangle("roundrect", 1050, 10, 130, 30, 6, 6)
+    roundedRect("fill", 1050, 10, 130, 30, 6)
     love.graphics.setColor(1, 1, 1)
     love.graphics.setFont(smallFont)
     love.graphics.print("Сохранить", 1065, 16)
     
-    -- Отображение кода
     love.graphics.setColor(0.9, 0.9, 0.9)
     love.graphics.setFont(smallFont)
     
@@ -382,7 +392,6 @@ function drawCodePanel()
     local y = 70
     for i, line in ipairs(lines) do
         if y > 800 then break end
-        -- Подсветка комментариев
         if string.sub(line, 1, 2) == "--" then
             love.graphics.setColor(0.4, 0.6, 0.4)
         elseif string.find(line, "function") then
@@ -422,23 +431,16 @@ function generateLuaCode()
     table.insert(codeLines, "}")
     table.insert(codeLines, "")
     
-    -- Парсим блоки
-    local hasStart = false
-    local hasUpdate = false
-    local hasDraw = false
-    local drawColor = "love.graphics.setColor(1, 0.6, 0.2)" -- оранжевый по умолчанию
+    local drawColor = "love.graphics.setColor(1, 0.6, 0.2)"
     local initX, initY = 100, 100
     local moveRight, moveLeft, moveUp, moveDown = 0, 0, 0, 0
     local jumpPower = 0
     local keyActions = {}
-    local color = {1, 0.6, 0.2}
     local sizeMultiplier = 1
     
     for _, script in ipairs(obj.scripts) do
         if script.type == "when_start" then
-            hasStart = true
         elseif script.type == "when_update" then
-            hasUpdate = true
         elseif script.type == "set_position" then
             initX = script.x or 100
             initY = script.y or 100
@@ -455,14 +457,12 @@ function generateLuaCode()
         elseif script.type == "if_key_pressed" then
             table.insert(keyActions, script.key)
         elseif script.type == "change_color" and script.color then
-            color = script.color
-            drawColor = string.format("love.graphics.setColor(%.1f, %.1f, %.1f)", color[1], color[2], color[3])
+            drawColor = string.format("love.graphics.setColor(%.1f, %.1f, %.1f)", script.color[1], script.color[2], script.color[3])
         elseif script.type == "change_size" then
             sizeMultiplier = script.value or 1.5
         end
     end
     
-    -- Функция love.load
     table.insert(codeLines, "function love.load()")
     table.insert(codeLines, "    " .. obj.id .. ".x = " .. initX)
     table.insert(codeLines, "    " .. obj.id .. ".y = " .. initY)
@@ -470,9 +470,7 @@ function generateLuaCode()
     table.insert(codeLines, "end")
     table.insert(codeLines, "")
     
-    -- Функция love.update
     table.insert(codeLines, "function love.update(dt)")
-    -- Движение
     if moveRight > 0 then
         table.insert(codeLines, "    " .. obj.id .. ".x = " .. obj.id .. ".x + " .. moveRight .. " * dt")
     end
@@ -486,7 +484,6 @@ function generateLuaCode()
         table.insert(codeLines, "    " .. obj.id .. ".y = " .. obj.id .. ".y + " .. moveDown .. " * dt")
     end
     
-    -- Клавиши
     for _, key in ipairs(keyActions) do
         table.insert(codeLines, "    if love.keyboard.isDown('" .. key .. "') then")
         if key == "space" then
@@ -500,7 +497,6 @@ function generateLuaCode()
     table.insert(codeLines, "end")
     table.insert(codeLines, "")
     
-    -- Функция love.draw
     table.insert(codeLines, "function love.draw()")
     table.insert(codeLines, "    " .. drawColor)
     local size = 50 * sizeMultiplier
@@ -544,7 +540,6 @@ end
 
 function love.mousepressed(x, y, button)
     if x > 760 then 
-        -- Кнопка "Сохранить" на панели кода
         if x > 1050 and x < 1180 and y > 10 and y < 40 then
             love.system.openURL("data:text/plain;charset=utf-8," .. love.util.encodeURI(generatedCode))
         end
@@ -574,7 +569,6 @@ function love.mousepressed(x, y, button)
             end
             yPos = yPos + 80
         end
-        -- Кнопка "Новый объект"
         if x > 20 and x < 170 and y > 750 and y < 790 then
             local project = getCurrentProject()
             table.insert(project.objects, {
@@ -589,7 +583,6 @@ function love.mousepressed(x, y, button)
         local obj = getCurrentObject()
         local yPos = 110
         
-        -- Проверка клика по блокам
         for i, script in ipairs(obj.scripts) do
             if x > 700 and x < 725 and y > yPos + 10 and y < yPos + 35 then
                 table.remove(obj.scripts, i)
@@ -599,7 +592,6 @@ function love.mousepressed(x, y, button)
             yPos = yPos + 75
         end
         
-        -- Кнопка добавления блока
         if x > 20 and x < 170 and y > 750 and y < 790 then
             state.currentScreen = "categories"
         end
@@ -619,7 +611,6 @@ function love.mousepressed(x, y, button)
         local yPos = 80
         for i, block in ipairs(blocks) do
             if x > 20 and x < 730 and y > yPos and y < yPos + 55 then
-                -- Добавляем блок
                 local obj = getCurrentObject()
                 local newBlock = {}
                 for k, v in pairs(block) do
@@ -648,7 +639,6 @@ function love.keypressed(key)
 end
 
 function love.mousemoved(x, y, dx, dy)
-    -- Для hover эффектов
 end
 
 function love.resize(w, h)
