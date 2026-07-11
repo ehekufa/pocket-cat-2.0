@@ -1,0 +1,170 @@
+name: Build PocketCat (Android + Windows)
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  # ---------- Android Release (love.net) ----------
+  build-android-release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: android-actions/setup-android@v3
+      - name: Cache NDK
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.ANDROID_HOME }}/ndk/25.2.9519653
+          key: ndk-25.2.9519653-v2
+      - name: Install NDK
+        run: |
+          if [ ! -d "$ANDROID_HOME/ndk/25.2.9519653" ]; then
+            yes | sdkmanager "ndk;25.2.9519653"
+          fi
+      - name: Export NDK
+        run: |
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/25.2.9519653" >> $GITHUB_ENV
+          echo "ANDROID_NDK_ROOT=$ANDROID_HOME/ndk/25.2.9519653" >> $GITHUB_ENV
+      - name: Cache love-android
+        uses: actions/cache@v4
+        with:
+          path: love-android
+          key: love-android-src-v2
+      - name: Clone love-android
+        run: |
+          if [ ! -f "love-android/gradlew" ]; then
+            git clone --recursive --depth 1 https://github.com/love2d/love-android.git
+          fi
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-v2
+      - name: Configure Gradle
+        run: |
+          echo "org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=512m" >> love-android/gradle.properties
+          echo "org.gradle.daemon=false" >> love-android/gradle.properties
+          echo "org.gradle.parallel=false" >> love-android/gradle.properties
+          echo "org.gradle.caching=true" >> love-android/gradle.properties
+          echo "android.enableJetifier=false" >> love-android/gradle.properties
+          echo "android.useAndroidX=true" >> love-android/gradle.properties
+          echo "android.enableR8.fullMode=true" >> love-android/gradle.properties
+          echo "android.defaults.buildfeatures.strip=true" >> love-android/gradle.properties
+      - name: Package game.love
+        run: |
+          zip -9 -r game.love . -x "*.git*" -x ".github/*" -x "love-android/*" -x "*.yml" -x "README.md" -x ".gitignore" -x "LICENSE" -x "*.psd" -x "*.xcf" -x "sounds/*" -x "sprites/*.png" 2>/dev/null || true
+      - name: Embed game
+        run: |
+          mkdir -p love-android/app/src/embed/assets
+          cp game.love love-android/app/src/embed/assets/game.love
+      - name: Force arm64 only
+        run: |
+          sed -i '/abiFilters/d' love-android/app/build.gradle
+          sed -i '/defaultConfig {/a\        ndk { abiFilters "arm64-v8a" }' love-android/app/build.gradle
+      - name: Create keystore
+        id: create_keystore
+        run: |
+          if [ -z "${{ secrets.KEYSTORE_BASE64 }}" ]; then
+            keytool -genkey -v -keystore release.keystore -alias pocketcat -keyalg RSA -keysize 2048 \
+              -validity 10000 -dname "CN=PocketCat, OU=Dev, O=Dev, L=City, S=State, C=RU" \
+              -storepass pocketcat -keypass pocketcat
+            echo "KEYSTORE_BASE64=$(base64 -w0 release.keystore)" >> $GITHUB_ENV
+            echo "KEYSTORE_PASSWORD=pocketcat" >> $GITHUB_ENV
+            echo "KEY_ALIAS=pocketcat" >> $GITHUB_ENV
+            echo "KEY_PASSWORD=pocketcat" >> $GITHUB_ENV
+          else
+            echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > release.keystore
+            echo "KEYSTORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }}" >> $GITHUB_ENV
+            echo "KEY_ALIAS=${{ secrets.KEY_ALIAS }}" >> $GITHUB_ENV
+            echo "KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}" >> $GITHUB_ENV
+          fi
+      - name: Configure signing
+        run: |
+          cat << EOF >> love-android/app/build.gradle
+          android {
+              signingConfigs {
+                  release {
+                      storeFile file('../../release.keystore')
+                      storePassword System.getenv("KEYSTORE_PASSWORD")
+                      keyAlias System.getenv("KEY_ALIAS")
+                      keyPassword System.getenv("KEY_PASSWORD")
+                  }
+              }
+              buildTypes {
+                  release {
+                      signingConfig signingConfigs.release
+                      minifyEnabled true
+                      shrinkResources true
+                      proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+                      debuggable false
+                      jniDebuggable false
+                  }
+              }
+          }
+          EOF
+      - name: Build APK
+        working-directory: love-android
+        run: ./gradlew assembleEmbedNoRecordRelease --no-daemon --console=plain --max-workers=2
+      - name: Collect APK
+        run: |
+          APK_FILE=$(find love-android/app/build/outputs -name "*.apk" | head -n 1)
+          if [ -n "$APK_FILE" ]; then
+            echo "Found APK: $APK_FILE"
+            cp "$APK_FILE" PocketCat_Android_Release.apk
+          else
+            echo "No APK found"
+            exit 1
+          fi
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: PocketCat_Android_Release
+          path: PocketCat_Android_Release.apk
+          compression-level: 0
+
+  # ---------- Windows Portable (с LuaSocket) ----------
+  build-windows-portable:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Package game.love
+        run: zip -9 -r game.love . -x "*.git*" -x ".github/*" -x "love-android/*" -x "*.yml" -x "README.md" -x ".gitignore" -x "LICENSE"
+      - name: Download LÖVE Windows 64-bit
+        run: |
+          wget -O love-windows.zip "https://github.com/love2d/love/releases/download/11.5/love-11.5-win64.zip"
+          unzip love-windows.zip -d love-windows
+      - name: Create Portable EXE (64-bit)
+        run: |
+          mkdir -p dist/PocketCat64
+          cp love-windows/love-11.5-win64/* dist/PocketCat64/
+          cat game.love >> dist/PocketCat64/love.exe
+          mv dist/PocketCat64/love.exe dist/PocketCat64/PocketCat.exe
+      - name: Add LuaSocket for Windows
+        run: |
+          # Скачиваем готовую сборку LuaSocket 3.0.0 для Windows 64-bit
+          wget -O luasocket-win64.zip "https://github.com/CristiFati/Prebuilt-Binaries/raw/master/LuaSocket/v3/LuaSocket-3.0.0(Lua5.4)-Win-pc064.zip"
+          unzip -o luasocket-win64.zip -d luasocket-temp
+          # Копируем все .dll в корень игры
+          cp luasocket-temp/*.dll dist/PocketCat64/ 2>/dev/null || true
+          # Копируем .lua файлы и папки socket/, mime/
+          cp luasocket-temp/*.lua dist/PocketCat64/ 2>/dev/null || true
+          cp -r luasocket-temp/socket dist/PocketCat64/ 2>/dev/null || true
+          cp -r luasocket-temp/mime dist/PocketCat64/ 2>/dev/null || true
+      - name: Create ZIP archive
+        run: |
+          cd dist
+          zip -9 -r ../PocketCat_Windows_Portable.zip PocketCat64/
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: PocketCat_Windows_Portable
+          path: PocketCat_Windows_Portable.zip
+          compression-level: 0
