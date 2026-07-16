@@ -431,9 +431,20 @@ function drawBrick(script, x, y)
                 love.graphics.setFont(fonts.normal)
                 return child_y + 53
             end
+        else
+            if script.id ~= "ev_start" then
+                love.graphics.setColor(color)
+                love.graphics.rectangle("fill", x + 40, slot_y + 5, 226, 48)
+                love.graphics.setColor(colors.text)
+                love.graphics.setFont(fonts.small)
+                love.graphics.print(getText("end_loop"), x + 50, slot_y + 20)
+                love.graphics.setFont(fonts.normal)
+                return slot_y + 53
+            end
         end
         return slot_y + 40
     end
+    
     return y + 56
 end
 
