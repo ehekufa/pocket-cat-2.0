@@ -1,4 +1,4 @@
--- main.lua - Полный рабочий порт Pocket Code
+-- main.lua - Полностью рабочий порт Pocket Code (без ошибок UTF-8)
 
 local db = {}
 local state = {
@@ -55,35 +55,35 @@ local library = {
 }
 
 local texts = {
-    projects = "Проекты на устройстве",
-    help = "Помощь",
-    community = "Сообщество Catrobat",
-    my_projects = "Мои проекты",
-    objects = "Объекты",
-    scripts = "Скрипты",
-    categories = "Категории",
-    blocks = "Блоки",
-    event = "Событие",
-    control = "Управление",
-    motion = "Движение",
-    looks = "Образы",
-    start = "При старте",
-    wait = "Ждать секунд",
-    forever = "Вечно",
-    rep = "Повторить",
-    change_x = "Изменить X на",
-    change_y = "Изменить Y на",
-    set_x = "Установить X",
-    set_y = "Установить Y",
-    rotate = "Повернуть на",
-    change_size = "Изменить размер на",
-    set_size = "Установить размер %",
-    end_loop = "Конец цикла",
-    exit = "ВЫХОД",
-    cancel = "ОТМЕНИТЬ",
-    ok = "ОК",
-    new_project = "Название новой программы",
-    new_object = "Новый объект"
+    projects = "Projects on device",
+    help = "Help",
+    community = "Catrobat Community",
+    my_projects = "My projects",
+    objects = "Objects",
+    scripts = "Scripts",
+    categories = "Categories",
+    blocks = "Blocks",
+    event = "Event",
+    control = "Control",
+    motion = "Motion",
+    looks = "Looks",
+    start = "Start",
+    wait = "Wait seconds",
+    forever = "Forever",
+    rep = "Repeat",
+    change_x = "Change X by",
+    change_y = "Change Y by",
+    set_x = "Set X",
+    set_y = "Set Y",
+    rotate = "Turn by",
+    change_size = "Change size by",
+    set_size = "Set size %",
+    end_loop = "End of loop",
+    exit = "EXIT",
+    cancel = "CANCEL",
+    ok = "OK",
+    new_project = "New project name",
+    new_object = "New object"
 }
 
 function getText(key)
