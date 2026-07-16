@@ -1,4 +1,4 @@
--- main.lua - Полный порт Pocket Code на Love2D с шрифтом Schulevetica
+-- main.lua - Исправленная версия
 
 -- ============================================================
 -- 1. ГЛОБАЛЬНЫЕ ДАННЫЕ И СОСТОЯНИЕ
@@ -106,17 +106,21 @@ end
 -- 3. ОСНОВНЫЕ ФУНКЦИИ LOVE2D
 -- ============================================================
 function love.load()
+    -- ИСПРАВЛЕНО: Правильная настройка окна
     love.window.setMode(800, 600, {
         resizable = true,
         vsync = true,
-        title = "Pocket Code Hybrid Final"
+        minwidth = 400,
+        minheight = 300
     })
+    
+    -- Устанавливаем заголовок отдельно
+    love.window.setTitle("Pocket Code Hybrid Final")
     
     love.graphics.setDefaultFilter("nearest", "nearest")
     
     -- ЗАГРУЗКА ШРИФТА SCHULEVETICA
     local font_path = "Schulevetica-Regular.otf"
-    local fallback_font = nil
     
     -- Проверяем существует ли файл шрифта
     if love.filesystem.getInfo(font_path) then
