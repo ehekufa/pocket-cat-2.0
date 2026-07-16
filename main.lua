@@ -136,13 +136,20 @@ function escapeString(s)
     local result = ""
     for i = 1, #s do
         local c = s:sub(i, i)
-        if c == "\\" then result = result .. "\\\\"
-        elseif c == "\"" then result = result .. "\\\""
-        elseif c == "\n" then result = result .. "\\n"
-        elseif c == "\r" then result = result .. "\\r"
-        elseif c == "\t" then result = result .. "\\t"
-        else result = result .. c
+        if c == "\\" then
+            result = result .. "\\\\"
+        elseif c == "\"" then
+            result = result .. "\\\""
+        elseif c == "\n" then
+            result = result .. "\\n"
+        elseif c == "\r" then
+            result = result .. "\\r"
+        elseif c == "\t" then
+            result = result .. "\\t"
+        else
+            result = result .. c
         end
+    end
     return result
 end
 
