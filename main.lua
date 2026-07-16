@@ -1,4 +1,4 @@
--- main.lua - Полностью рабочий порт Pocket Code Hybrid Final
+-- main.lua - Финальная версия без ошибок UTF-8
 
 -- ============================================================
 -- 1. ГЛОБАЛЬНЫЕ ДАННЫЕ И СОСТОЯНИЕ
@@ -37,7 +37,7 @@ local brick_colors = {
     looks = colors.brick_looks
 }
 
--- Библиотека блоков (используем безопасные имена без зарезервированных слов)
+-- Библиотека блоков
 local library = {
     event = {
         {id="ev_start", text="Start", cat="event", isHeader=true}
@@ -60,7 +60,7 @@ local library = {
     }
 }
 
--- Русские тексты для отображения - используем безопасные ключи
+-- Русские тексты
 local texts = {
     projects = "Проекты на устройстве",
     help = "Помощь",
@@ -77,7 +77,7 @@ local texts = {
     start = "При старте",
     wait = "Ждать секунд",
     forever = "Вечно",
-    rep = "Повторить",  -- Используем rep вместо repeat
+    rep = "Повторить",
     change_x = "Изменить X на",
     change_y = "Изменить Y на",
     set_x = "Установить X",
@@ -102,7 +102,7 @@ end
 -- ============================================================
 function loadData()
     if love.filesystem.getInfo("pocket_code_data.lua") then
-        local chunk, err = love.filesystem.load("pocket_code_data.lua")
+        local chunk = love.filesystem.load("pocket_code_data.lua")
         if chunk then
             local success, data = pcall(chunk)
             if success and data then 
@@ -191,7 +191,6 @@ function love.load()
     love.window.setTitle("Pocket Code Hybrid Final")
     love.graphics.setDefaultFilter("nearest", "nearest")
     
-    -- Загрузка шрифта
     local font_path = "Schulevetica-Regular.otf"
     if love.filesystem.getInfo(font_path) then
         fonts = {
@@ -290,22 +289,18 @@ end
 -- 5. РИСОВАНИЕ ЭКРАНОВ
 -- ============================================================
 
--- 5.1 ГЛАВНЫЙ ЭКРАН
 function drawHome()
     local w, h = love.graphics.getWidth(), love.graphics.getHeight()
     
-    -- Хедер
     love.graphics.setColor(colors.header)
     love.graphics.rectangle("fill", 0, 0, w, 60)
     love.graphics.setColor(colors.text)
     love.graphics.setFont(fonts.title)
     love.graphics.print("Pocket Code", 20, 18)
     
-    -- Баннер
     love.graphics.setColor(colors.accent)
     love.graphics.rectangle("fill", 0, 60, w, 180)
     
-    -- Иконка
     love.graphics.setColor(colors.text)
     love.graphics.setLineWidth(4)
     local cx, cy = w/2, 150
@@ -313,7 +308,6 @@ function drawHome()
     love.graphics.line(cx - 12, cy - 12, cx + 12, cy + 12)
     love.graphics.setLineWidth(1)
     
-    -- Меню
     local items = {"projects", "help", "community"}
     for i, key in ipairs(items) do
         local y = 260 + (i-1) * 70
@@ -339,7 +333,7 @@ function handleHomeClick(x, y)
     checkFABClick(x, y)
 end
 
--- 5.2 ПРОЕКТЫ
+-- ============================================================
 function drawProjects()
     local w, h = love.graphics.getWidth(), love.graphics.getHeight()
     drawHeader(getText("my_projects"), true)
@@ -362,7 +356,7 @@ function drawProjects()
         love.graphics.setColor(colors.text)
         love.graphics.setFont(fonts.normal)
         local display_name = project.name or "Project"
-        if #display_name > 15 then display_name = display_name:sub(1, 12) .. "..." end
+        if #display_name > 15 then display_name = display_name:sub(1, 12) .. "..."
         love.graphics.print(display_name, x + 10, y + card_h - 40)
         
         love.graphics.setColor({1, 0, 0, 0.5})
@@ -410,7 +404,7 @@ function handleProjectsClick(x, y)
     end
 end
 
--- 5.3 ОБЪЕКТЫ
+-- ============================================================
 function drawActors()
     local project = db[state.project_index]
     drawHeader(project.name or "Objects", true)
@@ -464,7 +458,7 @@ function handleActorsClick(x, y)
     end
 end
 
--- 5.4 РЕДАКТОР
+-- ============================================================
 function drawEditor()
     local actor = db[state.project_index].actors[state.actor_index]
     drawHeader(actor.name or "Scripts", true)
@@ -494,9 +488,7 @@ end
 
 function drawBrick(script, x, y)
     local color = brick_colors[script.cat] or {0.5, 0.5, 0.5}
-    local is_header = script.isHeader or false
     
-    -- Ручка
     love.graphics.setColor(color)
     love.graphics.rectangle("fill", x + 20, y, 46, 56)
     
@@ -505,15 +497,12 @@ function drawBrick(script, x, y)
     love.graphics.line(x + 30, y + 28, x + 56, y + 28)
     love.graphics.line(x + 30, y + 38, x + 56, y + 38)
     
-    -- Тело
     love.graphics.setColor(color)
     love.graphics.rectangle("fill", x + 66, y, 200, 56)
     
-    -- Текст (переводим)
     love.graphics.setColor(colors.text)
     love.graphics.setFont(fonts.normal)
     local display_text = script.text or "Block"
-    -- Переводим ключевые слова
     if display_text == "Start" then display_text = getText("start")
     elseif display_text == "Wait" then display_text = getText("wait")
     elseif display_text == "Forever" then display_text = getText("forever")
@@ -587,7 +576,7 @@ function handleEditorClick(x, y)
     end
 end
 
--- 5.5 КАТЕГОРИИ
+-- ============================================================
 function drawCategories()
     drawHeader(getText("categories"), true)
     
@@ -628,7 +617,7 @@ function handleCategoriesClick(x, y)
     end
 end
 
--- 5.6 ВЫБОР БЛОКОВ
+-- ============================================================
 function drawPicker()
     drawHeader(getText("blocks"), true)
     
@@ -685,7 +674,7 @@ function handlePickerClick(x, y)
     end
 end
 
--- 5.7 СЦЕНА
+-- ============================================================
 function drawStage()
     love.graphics.setColor({0, 0, 0})
     love.graphics.rectangle("fill", 0, 0, love.graphics.getWidth(), love.graphics.getHeight())
@@ -748,7 +737,7 @@ function checkFABClick(x, y)
     end
 end
 
--- 6.1 МОДАЛЬНОЕ ОКНО
+-- ============================================================
 function openModal(mode)
     state.modal_mode = mode
     state.show_modal = true
