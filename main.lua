@@ -1,9 +1,9 @@
--- main.lua - Исправленная версия
+-- main.lua - Полный порт Pocket Code Hybrid Final на Love2D
 
 -- ============================================================
 -- 1. ГЛОБАЛЬНЫЕ ДАННЫЕ И СОСТОЯНИЕ
 -- ============================================================
-local db = {} -- {name, actors: {name, color, scripts}}
+local db = {}
 local state = {
     current_screen = "home",
     project_index = -1,
@@ -13,20 +13,26 @@ local state = {
     show_modal = false,
     is_running = false,
     picker_category = "",
-    game_actors = {}
+    game_actors = {},
+    scroll_offset = 0,
+    scroll_speed = 0,
+    drag_data = nil,
+    selected_brick = nil
 }
 
 local colors = {
-    bg = {0.012, 0.165, 0.196},      -- #002a32
-    header = {0.0, 0.239, 0.298},    -- #003d4c
-    accent = {0.243, 0.710, 0.820},  -- #3eb5d1
-    fab = {1.0, 0.561, 0.0},         -- #ff8f00
-    brick_event = {0.953, 0.612, 0.071},   -- #f39c12
-    brick_control = {0.902, 0.494, 0.133}, -- #e67e22
-    brick_motion = {0.161, 0.502, 0.725},  -- #2980b9
-    brick_looks = {0.486, 0.702, 0.259},   -- #7cb342
+    bg = {0.012, 0.165, 0.196},
+    header = {0.0, 0.239, 0.298},
+    accent = {0.243, 0.710, 0.820},
+    fab = {1.0, 0.561, 0.0},
+    brick_event = {0.953, 0.612, 0.071},
+    brick_control = {0.902, 0.494, 0.133},
+    brick_motion = {0.161, 0.502, 0.725},
+    brick_looks = {0.486, 0.702, 0.259},
     text = {1, 1, 1},
-    shadow = {0, 0, 0, 0.5}
+    text_dark = {0.1, 0.1, 0.1},
+    shadow = {0, 0, 0, 0.5},
+    card_bg = {0.0, 0.302, 0.353}
 }
 
 local brick_colors = {
@@ -67,7 +73,6 @@ function loadData()
         local data = love.filesystem.load("pocket_code_data.lua")()
         if data then db = data end
     else
-        -- Данные по умолчанию для демонстрации
         db = {
             {name = "Мой первый проект", actors = {
                 {name = "Кот", color = {1, 0.5, 0}, scripts = {}},
@@ -106,54 +111,48 @@ end
 -- 3. ОСНОВНЫЕ ФУНКЦИИ LOVE2D
 -- ============================================================
 function love.load()
-    -- ИСПРАВЛЕНО: Правильная настройка окна
     love.window.setMode(800, 600, {
         resizable = true,
         vsync = true,
         minwidth = 400,
         minheight = 300
     })
-    
-    -- Устанавливаем заголовок отдельно
     love.window.setTitle("Pocket Code Hybrid Final")
-    
     love.graphics.setDefaultFilter("nearest", "nearest")
     
-    -- ЗАГРУЗКА ШРИФТА SCHULEVETICA
+    -- Загрузка шрифта
     local font_path = "Schulevetica-Regular.otf"
-    
-    -- Проверяем существует ли файл шрифта
     if love.filesystem.getInfo(font_path) then
-        -- Загружаем шрифт в разных размерах
         fonts = {
             normal = love.graphics.newFont(font_path, 14),
             big = love.graphics.newFont(font_path, 20),
             title = love.graphics.newFont(font_path, 18),
             header = love.graphics.newFont(font_path, 16),
             small = love.graphics.newFont(font_path, 12),
-            large = love.graphics.newFont(font_path, 40)
+            large = love.graphics.newFont(font_path, 40),
+            huge = love.graphics.newFont(font_path, 30)
         }
     else
-        -- Если шрифт не найден, используем стандартный
-        print("Предупреждение: Файл " .. font_path .. " не найден. Используется стандартный шрифт.")
         fonts = {
             normal = love.graphics.newFont(14),
             big = love.graphics.newFont(20),
             title = love.graphics.newFont(18),
             header = love.graphics.newFont(16),
             small = love.graphics.newFont(12),
-            large = love.graphics.newFont(40)
+            large = love.graphics.newFont(40),
+            huge = love.graphics.newFont(30)
         }
     end
     
     love.graphics.setFont(fonts.normal)
-    
     loadData()
     state.current_screen = "home"
+    
+    -- Включаем скроллинг колесиком мыши
+    love.mouse.setVisible(true)
 end
 
 function love.update(dt)
-    -- Обновление игры в режиме выполнения
     if state.is_running then
         updateGame(dt)
     end
@@ -178,22 +177,14 @@ function love.draw()
         drawStage()
     end
     
-    -- Модальное окно
     if state.show_modal then
         drawModal()
     end
 end
 
-function love.keypressed(key)
-    if key == "escape" then
-        if state.current_screen == "stage" then
-            stopGame()
-        elseif state.show_modal then
-            closeModal()
-        else
-            love.event.quit()
-        end
-    end
+function love.wheelmoved(dx, dy)
+    state.scroll_offset = state.scroll_offset - dy * 20
+    if state.scroll_offset < 0 then state.scroll_offset = 0 end
 end
 
 function love.mousepressed(x, y, button)
@@ -203,7 +194,7 @@ function love.mousepressed(x, y, button)
 end
 
 function love.resize(w, h)
-    -- Обработка изменения размера окна
+    -- Обработка изменения размера
 end
 
 -- ============================================================
@@ -238,23 +229,25 @@ end
 
 -- 5.1 ГЛАВНЫЙ ЭКРАН
 function drawHome()
-    -- Заголовок
+    local w, h = love.graphics.getWidth(), love.graphics.getHeight()
+    
+    -- Хедер
     love.graphics.setColor(colors.header)
-    love.graphics.rectangle("fill", 0, 0, love.graphics.getWidth(), 60)
+    love.graphics.rectangle("fill", 0, 0, w, 60)
     love.graphics.setColor(colors.text)
     love.graphics.setFont(fonts.title)
     love.graphics.print("Pocket Code", 20, 18)
     
     -- Баннер с карандашом
     love.graphics.setColor(colors.accent)
-    love.graphics.rectangle("fill", 0, 60, love.graphics.getWidth(), 180)
+    love.graphics.rectangle("fill", 0, 60, w, 180)
     
     -- Иконка карандаша
     love.graphics.setColor(colors.text)
-    love.graphics.setLineWidth(3)
-    love.graphics.circle("line", love.graphics.getWidth()/2, 150, 35)
-    love.graphics.line(love.graphics.getWidth()/2 - 12, 150 - 12, 
-                       love.graphics.getWidth()/2 + 12, 150 + 12)
+    love.graphics.setLineWidth(4)
+    local cx, cy = w/2, 150
+    love.graphics.circle("line", cx, cy, 35)
+    love.graphics.line(cx - 12, cy - 12, cx + 12, cy + 12)
     love.graphics.setLineWidth(1)
     
     -- Пункты меню
@@ -262,38 +255,34 @@ function drawHome()
     for i, item in ipairs(items) do
         local y = 260 + (i-1) * 70
         love.graphics.setColor({0.1, 0.2, 0.25, 0.3})
-        love.graphics.rectangle("fill", 0, y, love.graphics.getWidth(), 69)
+        love.graphics.rectangle("fill", 0, y, w, 69)
         love.graphics.setColor(colors.text)
         love.graphics.setFont(fonts.normal)
         love.graphics.print(item, 20, y + 22)
         
-        -- Стрелка вправо
+        -- Стрелка
         love.graphics.setFont(fonts.big)
-        love.graphics.print("›", love.graphics.getWidth() - 40, y + 18)
+        love.graphics.print("›", w - 40, y + 18)
         love.graphics.setFont(fonts.normal)
     end
     
-    -- FAB кнопка
     drawFAB()
 end
 
 function handleHomeClick(x, y)
-    -- Проверка клика по пунктам меню
     if x >= 0 and x <= love.graphics.getWidth() then
         if y >= 260 and y <= 329 then
             state.current_screen = "projects"
         end
     end
-    
-    -- Проверка FAB
     checkFABClick(x, y)
 end
 
--- 5.2 СПИСОК ПРОЕКТОВ
+-- 5.2 ПРОЕКТЫ
 function drawProjects()
+    local w, h = love.graphics.getWidth(), love.graphics.getHeight()
     drawHeader("Мои проекты", true)
     
-    local w = love.graphics.getWidth()
     local cards_per_row = 2
     local card_w = (w - 45) / cards_per_row
     local card_h = card_w
@@ -304,11 +293,18 @@ function drawProjects()
         local x = 15 + col * (card_w + 15)
         local y = 75 + row * (card_h + 15)
         
-        love.graphics.setColor({0.0, 0.302, 0.353})
+        -- Карточка проекта
+        love.graphics.setColor(colors.card_bg)
         love.graphics.rectangle("fill", x, y, card_w, card_h)
+        love.graphics.setColor({1, 1, 1, 0.1})
+        love.graphics.rectangle("line", x, y, card_w, card_h)
+        
+        -- Имя проекта
         love.graphics.setColor(colors.text)
         love.graphics.setFont(fonts.normal)
-        love.graphics.print(project.name, x + 10, y + card_h - 40)
+        local display_name = project.name
+        if #display_name > 15 then display_name = display_name:sub(1, 12) .. "..." end
+        love.graphics.print(display_name, x + 10, y + card_h - 40)
         
         -- Кнопка удаления
         love.graphics.setColor({1, 0, 0, 0.5})
@@ -336,7 +332,6 @@ function handleProjectsClick(x, y)
         
         if x >= card_x and x <= card_x + card_w and 
            y >= card_y and y <= card_y + card_h then
-            -- Проверка кнопки удаления
             local del_x = card_x + card_w - 20
             local del_y = card_y + 20
             if math.sqrt((x - del_x)^2 + (y - del_y)^2) <= 12 then
@@ -351,16 +346,13 @@ function handleProjectsClick(x, y)
         end
     end
     
-    -- Проверка FAB
     checkFABClick(x, y)
-    
-    -- Кнопка назад
     if x >= 10 and x <= 50 and y >= 10 and y <= 50 then
         state.current_screen = "home"
     end
 end
 
--- 5.3 СПИСОК ОБЪЕКТОВ
+-- 5.3 ОБЪЕКТЫ
 function drawActors()
     local project = db[state.project_index]
     drawHeader(project.name, true)
@@ -397,7 +389,6 @@ function handleActorsClick(x, y)
         local y_pos = 75 + (i-1) * 70
         if x >= 0 and x <= love.graphics.getWidth() and 
            y >= y_pos and y <= y_pos + 69 then
-            -- Проверка кнопки удаления
             local del_x = love.graphics.getWidth() - 30
             if math.sqrt((x - del_x)^2 + (y - (y_pos + 35))^2) <= 12 then
                 table.remove(project.actors, i)
@@ -412,8 +403,6 @@ function handleActorsClick(x, y)
     end
     
     checkFABClick(x, y)
-    
-    -- Кнопка назад
     if x >= 10 and x <= 50 and y >= 10 and y <= 50 then
         state.current_screen = "projects"
     end
@@ -424,28 +413,29 @@ function drawEditor()
     local actor = db[state.project_index].actors[state.actor_index]
     drawHeader(actor.name, true)
     
-    -- Рисуем блоки
-    local y = 75
+    -- Контейнер скриптов с прокруткой
+    local y = 75 - state.scroll_offset
     for i, script in ipairs(actor.scripts) do
         y = drawBrick(script, 0, y) + 5
+        if y > love.graphics.getHeight() + 100 then break end
     end
     
     -- Нижняя панель
+    local h = love.graphics.getHeight()
     love.graphics.setColor(colors.header)
-    love.graphics.rectangle("fill", 0, love.graphics.getHeight() - 70, 
-                           love.graphics.getWidth(), 70)
+    love.graphics.rectangle("fill", 0, h - 70, love.graphics.getWidth(), 70)
     
-    -- Кнопки в нижней панели
+    -- Кнопка "+"
     love.graphics.setColor(colors.text)
     love.graphics.setFont(fonts.big)
-    love.graphics.print("+", 30, love.graphics.getHeight() - 45)
+    love.graphics.print("+", 30, h - 45)
     
-    -- Кнопка Play
+    -- Кнопка Play - треугольник
     love.graphics.setColor(colors.accent)
     love.graphics.polygon("fill", 
-        love.graphics.getWidth() - 60, love.graphics.getHeight() - 55,
-        love.graphics.getWidth() - 60, love.graphics.getHeight() - 25,
-        love.graphics.getWidth() - 30, love.graphics.getHeight() - 40
+        love.graphics.getWidth() - 60, h - 55,
+        love.graphics.getWidth() - 60, h - 25,
+        love.graphics.getWidth() - 30, h - 40
     )
     love.graphics.setFont(fonts.normal)
 end
@@ -464,10 +454,9 @@ function drawBrick(script, x, y)
     love.graphics.line(x + 30, y + 28, x + 56, y + 28)
     love.graphics.line(x + 30, y + 38, x + 56, y + 38)
     
-    -- Тело
+    -- Тело кирпичика
     love.graphics.setColor(color)
     if is_header then
-        -- Заголовок с закруглением
         love.graphics.rectangle("fill", x + 66, y, 200, 56)
     else
         love.graphics.rectangle("fill", x + 66, y, 200, 56)
@@ -478,8 +467,10 @@ function drawBrick(script, x, y)
     love.graphics.setFont(fonts.normal)
     love.graphics.print(script.text, x + 75, y + 18)
     
-    -- Значение если есть
-    if script.val then
+    -- Поле ввода для значения
+    if script.val ~= nil then
+        love.graphics.setColor(colors.text)
+        love.graphics.rectangle("line", x + 190, y + 10, 45, 30)
         love.graphics.print(tostring(script.val), x + 200, y + 18)
     end
     
@@ -492,6 +483,9 @@ function drawBrick(script, x, y)
         local slot_y = y + 56
         love.graphics.setColor({1, 1, 1, 0.1})
         love.graphics.rectangle("fill", x + 40, slot_y, 20, 40)
+        love.graphics.setColor({1, 1, 1, 0.2})
+        love.graphics.line(x + 40, slot_y, x + 60, slot_y + 40)
+        love.graphics.line(x + 60, slot_y, x + 40, slot_y + 40)
         
         -- Рекурсивно рисуем вложенные блоки
         if script.children then
@@ -519,16 +513,17 @@ function drawBrick(script, x, y)
 end
 
 function handleEditorClick(x, y)
-    -- Проверка кнопки "+"
-    if x >= 10 and x <= 50 and y >= love.graphics.getHeight() - 60 and 
-       y <= love.graphics.getHeight() - 20 then
+    local h = love.graphics.getHeight()
+    local w = love.graphics.getWidth()
+    
+    -- Кнопка "+"
+    if x >= 10 and x <= 50 and y >= h - 60 and y <= h - 20 then
         state.current_screen = "categories"
         return
     end
     
-    -- Проверка кнопки Play
-    if x >= love.graphics.getWidth() - 70 and x <= love.graphics.getWidth() - 20 and
-       y >= love.graphics.getHeight() - 60 and y <= love.graphics.getHeight() - 20 then
+    -- Кнопка Play
+    if x >= w - 70 and x <= w - 20 and y >= h - 60 and y <= h - 20 then
         playGame()
         return
     end
@@ -575,13 +570,12 @@ function handleCategoriesClick(x, y)
         end
     end
     
-    -- Кнопка назад
     if x >= 10 and x <= 50 and y >= 10 and y <= 50 then
         state.current_screen = "editor"
     end
 end
 
--- 5.6 ВЫБОР БЛОКА
+-- 5.6 ВЫБОР БЛОКОВ
 function drawPicker()
     drawHeader(state.picker_category:upper(), true)
     
@@ -605,7 +599,6 @@ function handlePickerClick(x, y)
     
     for i, block in ipairs(blocks) do
         if x >= 20 and x <= 270 and y >= y_pos and y <= y_pos + 56 then
-            -- Добавляем блок в скрипты
             local actor = db[state.project_index].actors[state.actor_index]
             local new_block = {id=block.id, text=block.text, cat=block.cat}
             if block.val then new_block.val = block.val end
@@ -621,7 +614,6 @@ function handlePickerClick(x, y)
         y_pos = y_pos + 66
     end
     
-    -- Кнопка назад
     if x >= 10 and x <= 50 and y >= 10 and y <= 50 then
         state.current_screen = "categories"
     end
@@ -661,8 +653,9 @@ end
 -- ============================================================
 
 function drawHeader(title, show_back)
+    local w = love.graphics.getWidth()
     love.graphics.setColor(colors.header)
-    love.graphics.rectangle("fill", 0, 0, love.graphics.getWidth(), 60)
+    love.graphics.rectangle("fill", 0, 0, w, 60)
     love.graphics.setColor(colors.text)
     love.graphics.setFont(fonts.title)
     
@@ -674,8 +667,7 @@ function drawHeader(title, show_back)
 end
 
 function drawFAB()
-    local w = love.graphics.getWidth()
-    local h = love.graphics.getHeight()
+    local w, h = love.graphics.getWidth(), love.graphics.getHeight()
     love.graphics.setColor(colors.fab)
     love.graphics.circle("fill", w - 45, h - 45, 35)
     love.graphics.setColor(colors.text)
@@ -685,8 +677,7 @@ function drawFAB()
 end
 
 function checkFABClick(x, y)
-    local w = love.graphics.getWidth()
-    local h = love.graphics.getHeight()
+    local w, h = love.graphics.getWidth(), love.graphics.getHeight()
     local cx, cy = w - 45, h - 45
     if math.sqrt((x - cx)^2 + (y - cy)^2) <= 35 then
         openModal("project")
@@ -706,40 +697,40 @@ function closeModal()
 end
 
 function drawModal()
+    local w, h = love.graphics.getWidth(), love.graphics.getHeight()
+    
+    -- Затемнение
     love.graphics.setColor({0, 0, 0, 0.8})
-    love.graphics.rectangle("fill", 0, 0, love.graphics.getWidth(), love.graphics.getHeight())
+    love.graphics.rectangle("fill", 0, 0, w, h)
     
+    -- Диалоговое окно
     love.graphics.setColor({0.259, 0.259, 0.259})
-    love.graphics.rectangle("fill", 50, 150, love.graphics.getWidth() - 100, 200)
+    love.graphics.rectangle("fill", w/2 - 200, 150, 400, 220)
     
+    -- Заголовок
     love.graphics.setColor(colors.text)
-    love.graphics.setFont(fonts.title)
+    love.graphics.setFont(fonts.normal)
     local title = state.modal_mode == "project" and "Название новой программы" or "Новый объект"
-    love.graphics.print(title, 70, 180)
+    love.graphics.print(title, w/2 - 180, 180)
     
     -- Поле ввода
     love.graphics.setColor(colors.accent)
-    love.graphics.line(70, 270, love.graphics.getWidth() - 70, 270)
+    love.graphics.line(w/2 - 180, 280, w/2 + 180, 280)
     love.graphics.setColor(colors.text)
     love.graphics.setFont(fonts.normal)
-    love.graphics.print(state.modal_input, 70, 240)
+    love.graphics.print(state.modal_input, w/2 - 170, 250)
     
     -- Кнопки
     love.graphics.setFont(fonts.normal)
-    love.graphics.print("ОТМЕНИТЬ", love.graphics.getWidth() - 180, 310)
-    love.graphics.print("ОК", love.graphics.getWidth() - 80, 310)
+    love.graphics.print("ОТМЕНИТЬ", w/2 + 100, 320)
+    love.graphics.print("ОК", w/2 + 200, 320)
 end
 
 function handleModalClick(x, y)
-    -- Поле ввода
-    if x >= 70 and x <= love.graphics.getWidth() - 70 and y >= 240 and y <= 270 then
-        -- В Love2D для простоты используем клавиатуру
-        return
-    end
+    local w, h = love.graphics.getWidth(), love.graphics.getHeight()
     
     -- Кнопка ОК
-    if x >= love.graphics.getWidth() - 100 and x <= love.graphics.getWidth() - 50 and
-       y >= 300 and y <= 340 then
+    if x >= w/2 + 140 and x <= w/2 + 200 and y >= 310 and y <= 350 then
         if #state.modal_input > 0 then
             if state.modal_mode == "project" then
                 table.insert(db, {name = state.modal_input, actors = {}})
@@ -762,12 +753,12 @@ function handleModalClick(x, y)
     end
     
     -- Кнопка ОТМЕНИТЬ
-    if x >= love.graphics.getWidth() - 200 and x <= love.graphics.getWidth() - 120 and
-       y >= 300 and y <= 340 then
+    if x >= w/2 + 20 and x <= w/2 + 120 and y >= 310 and y <= 350 then
         closeModal()
     end
 end
 
+-- Ввод с клавиатуры
 function love.textinput(text)
     if state.show_modal then
         state.modal_input = state.modal_input .. text
@@ -779,7 +770,6 @@ function love.keypressed(key)
         if key == "backspace" then
             state.modal_input = state.modal_input:sub(1, -2)
         elseif key == "return" or key == "kpenter" then
-            -- Эмулируем нажатие ОК
             if #state.modal_input > 0 then
                 if state.modal_mode == "project" then
                     table.insert(db, {name = state.modal_input, actors = {}})
@@ -807,8 +797,6 @@ function love.keypressed(key)
             stopGame()
         elseif state.show_modal then
             closeModal()
-        else
-            love.event.quit()
         end
     end
 end
@@ -832,12 +820,10 @@ function playGame()
             x = w/2 + math.random(-100, 100),
             y = h/2 + math.random(-100, 100),
             s = 1,
-            r = 0,
-            el = nil -- В Love2D просто рисуем напрямую
+            r = 0
         })
     end
     
-    -- Запускаем выполнение скриптов
     for _, actor in ipairs(state.game_actors) do
         runCode(actor, actor.scripts)
     end
@@ -849,14 +835,13 @@ function stopGame()
 end
 
 function updateGame(dt)
-    -- Обновление состояния игры (если нужно)
+    -- Обновление позиций спрайтов
 end
 
 function runCode(actor, scripts)
     for i, script in ipairs(scripts) do
         if not state.is_running then return end
         
-        -- Выполнение команд
         if script.id == "m_x" then
             actor.x = actor.x + (script.val or 30)
         elseif script.id == "m_y" then
@@ -901,6 +886,11 @@ function runCode(actor, scripts)
         end
     end
 end
+
+-- ============================================================
+-- 8. ЗАПУСК
+-- ============================================================
+-- Автоматический запуск через love.load()
 
 -- ============================================================
 -- 8. ЗАПУСК ПРИЛОЖЕНИЯ
