@@ -1,4 +1,4 @@
--- main.lua - Полный порт Pocket Code Hybrid Final на Love2D
+-- main.lua - Полный порт Pocket Code Hybrid Final на Love2D (с кириллицей)
 
 -- ============================================================
 -- 1. ГЛОБАЛЬНЫЕ ДАННЫЕ И СОСТОЯНИЕ
@@ -42,7 +42,7 @@ local brick_colors = {
     looks = colors.brick_looks
 }
 
--- Библиотека блоков
+-- Библиотека блоков с русским текстом
 local library = {
     event = {
         {id="ev_start", text="При старте", cat="event", isHeader=true}
@@ -70,34 +70,54 @@ local library = {
 -- ============================================================
 function loadData()
     if love.filesystem.getInfo("pocket_code_data.lua") then
-        local data = love.filesystem.load("pocket_code_data.lua")()
-        if data then db = data end
+        -- Используем безопасную загрузку
+        local chunk, err = love.filesystem.load("pocket_code_data.lua")
+        if chunk then
+            local success, data = pcall(chunk)
+            if success and data then 
+                db = data 
+            else
+                db = getDefaultData()
+            end
+        else
+            db = getDefaultData()
+        end
     else
-        db = {
-            {name = "Мой первый проект", actors = {
-                {name = "Кот", color = {1, 0.5, 0}, scripts = {}},
-                {name = "Мяч", color = {0.3, 0.6, 1}, scripts = {}}
-            }}
-        }
+        db = getDefaultData()
         saveData()
     end
 end
 
+function getDefaultData()
+    return {
+        {name = "Мой первый проект", actors = {
+            {name = "Кот", color = {1, 0.5, 0}, scripts = {}},
+            {name = "Мяч", color = {0.3, 0.6, 1}, scripts = {}}
+        }}
+    }
+end
+
 function saveData()
-    local str = "return " .. serialize(db)
-    love.filesystem.write("pocket_code_data.lua", str)
+    -- Сохраняем в бинарном виде для корректной работы с UTF-8
+    local file = love.filesystem.newFile("pocket_code_data.lua")
+    file:open("w")
+    local content = "return " .. serialize(db)
+    file:write(content)
+    file:close()
 end
 
 function serialize(t)
     if type(t) == "table" then
         local str = "{"
         for k, v in pairs(t) do
-            if type(k) == "string" then str = str .. "[\"" .. k .. "\"]=" end
+            if type(k) == "string" then 
+                str = str .. "[\"" .. escapeString(k) .. "\"]=" 
+            end
             str = str .. serialize(v) .. ","
         end
         return str .. "}"
     elseif type(t) == "string" then
-        return "\"" .. t .. "\""
+        return "\"" .. escapeString(t) .. "\""
     elseif type(t) == "number" then
         return tostring(t)
     elseif type(t) == "boolean" then
@@ -105,6 +125,28 @@ function serialize(t)
     else
         return "nil"
     end
+end
+
+function escapeString(s)
+    -- Экранируем специальные символы, сохраняя UTF-8
+    local result = ""
+    for i = 1, #s do
+        local c = s:sub(i, i)
+        if c == "\\" then
+            result = result .. "\\\\"
+        elseif c == "\"" then
+            result = result .. "\\\""
+        elseif c == "\n" then
+            result = result .. "\\n"
+        elseif c == "\r" then
+            result = result .. "\\r"
+        elseif c == "\t" then
+            result = result .. "\\t"
+        else
+            result = result .. c
+        end
+    end
+    return result
 end
 
 -- ============================================================
@@ -120,9 +162,10 @@ function love.load()
     love.window.setTitle("Pocket Code Hybrid Final")
     love.graphics.setDefaultFilter("nearest", "nearest")
     
-    -- Загрузка шрифта
+    -- Загрузка шрифта с кириллицей
     local font_path = "Schulevetica-Regular.otf"
     if love.filesystem.getInfo(font_path) then
+        -- Пробуем загрузить шрифт с поддержкой кириллицы
         fonts = {
             normal = love.graphics.newFont(font_path, 14),
             big = love.graphics.newFont(font_path, 20),
@@ -133,6 +176,8 @@ function love.load()
             huge = love.graphics.newFont(font_path, 30)
         }
     else
+        -- Если шрифт не найден, используем стандартный
+        print("Шрифт " .. font_path .. " не найден. Используется стандартный шрифт.")
         fonts = {
             normal = love.graphics.newFont(14),
             big = love.graphics.newFont(20),
@@ -145,10 +190,14 @@ function love.load()
     end
     
     love.graphics.setFont(fonts.normal)
+    
+    -- Устанавливаем кодировку для консоли (только для Windows)
+    if love.system.getOS() == "Windows" then
+        os.execute("chcp 65001 > nul")
+    end
+    
     loadData()
     state.current_screen = "home"
-    
-    -- Включаем скроллинг колесиком мыши
     love.mouse.setVisible(true)
 end
 
@@ -302,7 +351,7 @@ function drawProjects()
         -- Имя проекта
         love.graphics.setColor(colors.text)
         love.graphics.setFont(fonts.normal)
-        local display_name = project.name
+        local display_name = project.name or "Проект"
         if #display_name > 15 then display_name = display_name:sub(1, 12) .. "..." end
         love.graphics.print(display_name, x + 10, y + card_h - 40)
         
@@ -355,7 +404,7 @@ end
 -- 5.3 ОБЪЕКТЫ
 function drawActors()
     local project = db[state.project_index]
-    drawHeader(project.name, true)
+    drawHeader(project.name or "Объекты", true)
     
     for i, actor in ipairs(project.actors) do
         local y = 75 + (i-1) * 70
@@ -363,12 +412,12 @@ function drawActors()
         love.graphics.rectangle("fill", 0, y, love.graphics.getWidth(), 69)
         
         -- Цветной квадратик
-        love.graphics.setColor(actor.color)
+        love.graphics.setColor(actor.color or {1, 0, 0})
         love.graphics.rectangle("fill", 20, y + 22, 25, 25)
         
         love.graphics.setColor(colors.text)
         love.graphics.setFont(fonts.normal)
-        love.graphics.print(actor.name, 60, y + 28)
+        love.graphics.print(actor.name or "Объект", 60, y + 28)
         
         -- Кнопка удаления
         love.graphics.setColor({1, 0, 0, 0.5})
@@ -411,11 +460,11 @@ end
 -- 5.4 РЕДАКТОР
 function drawEditor()
     local actor = db[state.project_index].actors[state.actor_index]
-    drawHeader(actor.name, true)
+    drawHeader(actor.name or "Скрипты", true)
     
     -- Контейнер скриптов с прокруткой
     local y = 75 - state.scroll_offset
-    for i, script in ipairs(actor.scripts) do
+    for i, script in ipairs(actor.scripts or {}) do
         y = drawBrick(script, 0, y) + 5
         if y > love.graphics.getHeight() + 100 then break end
     end
@@ -465,7 +514,7 @@ function drawBrick(script, x, y)
     -- Текст
     love.graphics.setColor(colors.text)
     love.graphics.setFont(fonts.normal)
-    love.graphics.print(script.text, x + 75, y + 18)
+    love.graphics.print(script.text or "Блок", x + 75, y + 18)
     
     -- Поле ввода для значения
     if script.val ~= nil then
@@ -577,7 +626,7 @@ end
 
 -- 5.6 ВЫБОР БЛОКОВ
 function drawPicker()
-    drawHeader(state.picker_category:upper(), true)
+    drawHeader("Блоки", true)
     
     local blocks = library[state.picker_category] or {}
     local y = 75
@@ -588,7 +637,7 @@ function drawPicker()
         love.graphics.rectangle("fill", 20, y, 250, 56)
         love.graphics.setColor(colors.text)
         love.graphics.setFont(fonts.normal)
-        love.graphics.print(block.text, 35, y + 18)
+        love.graphics.print(block.text or "Блок", 35, y + 18)
         y = y + 66
     end
 end
@@ -890,9 +939,3 @@ end
 -- ============================================================
 -- 8. ЗАПУСК
 -- ============================================================
--- Автоматический запуск через love.load()
-
--- ============================================================
--- 8. ЗАПУСК ПРИЛОЖЕНИЯ
--- ============================================================
--- Приложение автоматически запускается через love.load()
