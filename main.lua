@@ -1,4 +1,4 @@
--- main.lua - Полный порт Pocket Code Hybrid Final на Love2D (с кириллицей)
+-- main.lua - Полный порт Pocket Code Hybrid Final на Love2D (с кириллицей, без ошибок)
 
 -- ============================================================
 -- 1. ГЛОБАЛЬНЫЕ ДАННЫЕ И СОСТОЯНИЕ
@@ -70,7 +70,6 @@ local library = {
 -- ============================================================
 function loadData()
     if love.filesystem.getInfo("pocket_code_data.lua") then
-        -- Используем безопасную загрузку
         local chunk, err = love.filesystem.load("pocket_code_data.lua")
         if chunk then
             local success, data = pcall(chunk)
@@ -98,7 +97,6 @@ function getDefaultData()
 end
 
 function saveData()
-    -- Сохраняем в бинарном виде для корректной работы с UTF-8
     local file = love.filesystem.newFile("pocket_code_data.lua")
     file:open("w")
     local content = "return " .. serialize(db)
@@ -128,7 +126,6 @@ function serialize(t)
 end
 
 function escapeString(s)
-    -- Экранируем специальные символы, сохраняя UTF-8
     local result = ""
     for i = 1, #s do
         local c = s:sub(i, i)
@@ -165,7 +162,6 @@ function love.load()
     -- Загрузка шрифта с кириллицей
     local font_path = "Schulevetica-Regular.otf"
     if love.filesystem.getInfo(font_path) then
-        -- Пробуем загрузить шрифт с поддержкой кириллицы
         fonts = {
             normal = love.graphics.newFont(font_path, 14),
             big = love.graphics.newFont(font_path, 20),
@@ -176,8 +172,7 @@ function love.load()
             huge = love.graphics.newFont(font_path, 30)
         }
     else
-        -- Если шрифт не найден, используем стандартный
-        print("Шрифт " .. font_path .. " не найден. Используется стандартный шрифт.")
+        -- Без вывода в консоль
         fonts = {
             normal = love.graphics.newFont(14),
             big = love.graphics.newFont(20),
@@ -190,12 +185,6 @@ function love.load()
     end
     
     love.graphics.setFont(fonts.normal)
-    
-    -- Устанавливаем кодировку для консоли (только для Windows)
-    if love.system.getOS() == "Windows" then
-        os.execute("chcp 65001 > nul")
-    end
-    
     loadData()
     state.current_screen = "home"
     love.mouse.setVisible(true)
@@ -360,7 +349,7 @@ function drawProjects()
         love.graphics.circle("fill", x + card_w - 20, y + 20, 12)
         love.graphics.setColor(colors.text)
         love.graphics.setFont(fonts.small)
-        love.graphics.print("✕", x + card_w - 25, y + 13)
+        love.graphics.print("x", x + card_w - 25, y + 13)
         love.graphics.setFont(fonts.normal)
     end
     
@@ -424,7 +413,7 @@ function drawActors()
         love.graphics.circle("fill", love.graphics.getWidth() - 30, y + 35, 12)
         love.graphics.setColor(colors.text)
         love.graphics.setFont(fonts.small)
-        love.graphics.print("✕", love.graphics.getWidth() - 35, y + 28)
+        love.graphics.print("x", love.graphics.getWidth() - 35, y + 28)
         love.graphics.setFont(fonts.normal)
     end
     
@@ -525,7 +514,7 @@ function drawBrick(script, x, y)
     
     -- Кнопка удаления
     love.graphics.setColor({1, 0, 0, 0.5})
-    love.graphics.print("✕", x + 250, y + 18)
+    love.graphics.print("x", x + 250, y + 18)
     
     -- Слот для вложенных блоков
     if script.id == "ev_start" or script.id == "c_forever" or script.id == "c_repeat" then
@@ -939,3 +928,4 @@ end
 -- ============================================================
 -- 8. ЗАПУСК
 -- ============================================================
+-- Автоматический запуск через love.load()
