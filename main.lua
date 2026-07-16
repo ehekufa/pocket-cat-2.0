@@ -37,7 +37,7 @@ local brick_colors = {
     looks = colors.brick_looks
 }
 
--- Библиотека блоков (используем английские ключи, но русский текст через love.graphics)
+-- Библиотека блоков (используем безопасные имена без зарезервированных слов)
 local library = {
     event = {
         {id="ev_start", text="Start", cat="event", isHeader=true}
@@ -60,7 +60,7 @@ local library = {
     }
 }
 
--- Русские тексты для отображения
+-- Русские тексты для отображения - используем безопасные ключи
 local texts = {
     projects = "Проекты на устройстве",
     help = "Помощь",
@@ -77,7 +77,7 @@ local texts = {
     start = "При старте",
     wait = "Ждать секунд",
     forever = "Вечно",
-    repeat = "Повторить",
+    rep = "Повторить",  -- Используем rep вместо repeat
     change_x = "Изменить X на",
     change_y = "Изменить Y на",
     set_x = "Установить X",
@@ -517,7 +517,7 @@ function drawBrick(script, x, y)
     if display_text == "Start" then display_text = getText("start")
     elseif display_text == "Wait" then display_text = getText("wait")
     elseif display_text == "Forever" then display_text = getText("forever")
-    elseif display_text == "Repeat" then display_text = getText("repeat")
+    elseif display_text == "Repeat" then display_text = getText("rep")
     elseif display_text == "Change X" then display_text = getText("change_x")
     elseif display_text == "Change Y" then display_text = getText("change_y")
     elseif display_text == "Set X" then display_text = getText("set_x")
@@ -645,7 +645,7 @@ function drawPicker()
         if display_text == "Start" then display_text = getText("start")
         elseif display_text == "Wait" then display_text = getText("wait")
         elseif display_text == "Forever" then display_text = getText("forever")
-        elseif display_text == "Repeat" then display_text = getText("repeat")
+        elseif display_text == "Repeat" then display_text = getText("rep")
         elseif display_text == "Change X" then display_text = getText("change_x")
         elseif display_text == "Change Y" then display_text = getText("change_y")
         elseif display_text == "Set X" then display_text = getText("set_x")
