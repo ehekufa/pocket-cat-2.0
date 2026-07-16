@@ -1,4 +1,4 @@
--- main.lua - Полный рабочий порт Pocket Code
+-- main.lua - Полностью рабочий порт Pocket Code
 
 local db = {}
 local state = {
@@ -371,14 +371,18 @@ end
 
 function drawBrick(script, x, y)
     local color = brick_colors[script.cat] or {0.5, 0.5, 0.5}
+    
     love.graphics.setColor(color)
     love.graphics.rectangle("fill", x + 20, y, 46, 56)
+    
     love.graphics.setColor({1, 1, 1, 0.3})
     love.graphics.line(x + 30, y + 18, x + 56, y + 18)
     love.graphics.line(x + 30, y + 28, x + 56, y + 28)
     love.graphics.line(x + 30, y + 38, x + 56, y + 38)
+    
     love.graphics.setColor(color)
     love.graphics.rectangle("fill", x + 66, y, 200, 56)
+    
     love.graphics.setColor(colors.text)
     love.graphics.setFont(fonts.normal)
     local display_text = script.text or "Block"
@@ -392,15 +396,19 @@ function drawBrick(script, x, y)
     elseif display_text == "Set Y" then display_text = getText("set_y")
     elseif display_text == "Rotate" then display_text = getText("rotate")
     elseif display_text == "Size" then display_text = getText("change_size")
-    elseif display_text == "Set Size" then display_text = getText("set_size") end
+    elseif display_text == "Set Size" then display_text = getText("set_size")
+    end
     love.graphics.print(display_text, x + 75, y + 18)
+    
     if script.val ~= nil then
         love.graphics.setColor(colors.text)
         love.graphics.rectangle("line", x + 190, y + 10, 45, 30)
         love.graphics.print(tostring(script.val), x + 200, y + 18)
     end
+    
     love.graphics.setColor({1, 0, 0, 0.5})
     love.graphics.print("x", x + 250, y + 18)
+    
     if script.id == "ev_start" or script.id == "c_forever" or script.id == "c_repeat" then
         local slot_y = y + 56
         love.graphics.setColor({1, 1, 1, 0.1})
@@ -408,20 +416,21 @@ function drawBrick(script, x, y)
         love.graphics.setColor({1, 1, 1, 0.2})
         love.graphics.line(x + 40, slot_y, x + 60, slot_y + 40)
         love.graphics.line(x + 60, slot_y, x + 40, slot_y + 40)
+        
         if script.children then
             local child_y = slot_y
             for _, child in ipairs(script.children) do
                 child_y = drawBrick(child, x + 40, child_y) + 5
             end
-        end
-        if script.id ~= "ev_start" then
-            love.graphics.setColor(color)
-            love.graphics.rectangle("fill", x + 40, child_y + 5, 226, 48)
-            love.graphics.setColor(colors.text)
-            love.graphics.setFont(fonts.small)
-            love.graphics.print(getText("end_loop"), x + 50, child_y + 20)
-            love.graphics.setFont(fonts.normal)
-            return child_y + 53
+            if script.id ~= "ev_start" then
+                love.graphics.setColor(color)
+                love.graphics.rectangle("fill", x + 40, child_y + 5, 226, 48)
+                love.graphics.setColor(colors.text)
+                love.graphics.setFont(fonts.small)
+                love.graphics.print(getText("end_loop"), x + 50, child_y + 20)
+                love.graphics.setFont(fonts.normal)
+                return child_y + 53
+            end
         end
         return slot_y + 40
     end
@@ -499,7 +508,8 @@ function drawPicker()
         elseif display_text == "Set Y" then display_text = getText("set_y")
         elseif display_text == "Rotate" then display_text = getText("rotate")
         elseif display_text == "Size" then display_text = getText("change_size")
-        elseif display_text == "Set Size" then display_text = getText("set_size") end
+        elseif display_text == "Set Size" then display_text = getText("set_size")
+        end
         love.graphics.print(display_text, 35, y + 18)
         y = y + 66
     end
