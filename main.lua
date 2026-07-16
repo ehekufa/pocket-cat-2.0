@@ -1,4 +1,4 @@
--- main.lua - Финальная версия без ошибок UTF-8
+-- main.lua - Финальная рабочая версия
 
 -- ============================================================
 -- 1. ГЛОБАЛЬНЫЕ ДАННЫЕ И СОСТОЯНИЕ
@@ -333,7 +333,6 @@ function handleHomeClick(x, y)
     checkFABClick(x, y)
 end
 
--- ============================================================
 function drawProjects()
     local w, h = love.graphics.getWidth(), love.graphics.getHeight()
     drawHeader(getText("my_projects"), true)
@@ -404,7 +403,6 @@ function handleProjectsClick(x, y)
     end
 end
 
--- ============================================================
 function drawActors()
     local project = db[state.project_index]
     drawHeader(project.name or "Objects", true)
@@ -458,7 +456,6 @@ function handleActorsClick(x, y)
     end
 end
 
--- ============================================================
 function drawEditor()
     local actor = db[state.project_index].actors[state.actor_index]
     drawHeader(actor.name or "Scripts", true)
@@ -576,7 +573,6 @@ function handleEditorClick(x, y)
     end
 end
 
--- ============================================================
 function drawCategories()
     drawHeader(getText("categories"), true)
     
@@ -617,7 +613,6 @@ function handleCategoriesClick(x, y)
     end
 end
 
--- ============================================================
 function drawPicker()
     drawHeader(getText("blocks"), true)
     
@@ -674,7 +669,6 @@ function handlePickerClick(x, y)
     end
 end
 
--- ============================================================
 function drawStage()
     love.graphics.setColor({0, 0, 0})
     love.graphics.rectangle("fill", 0, 0, love.graphics.getWidth(), love.graphics.getHeight())
@@ -737,7 +731,6 @@ function checkFABClick(x, y)
     end
 end
 
--- ============================================================
 function openModal(mode)
     state.modal_mode = mode
     state.show_modal = true
@@ -931,3 +924,7 @@ function runCode(actor, scripts)
         end
     end
 end
+
+-- ============================================================
+-- 8. ЗАПУСК
+-- ============================================================
