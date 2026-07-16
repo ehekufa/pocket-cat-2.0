@@ -1,5 +1,5 @@
 -- main.lua
--- Pocket Code Hybrid Final for Love2D
+-- Pocket Code для Love2D
 
 local db = {}
 local state = {
@@ -90,20 +90,36 @@ local T = {
     block = "Block"
 }
 
-function getText(key) return T[key] or key end
+function getText(key)
+    return T[key] or key
+end
 
 function loadData()
     if love.filesystem.getInfo("pocket_code_data.lua") then
         local chunk = love.filesystem.load("pocket_code_data.lua")
         if chunk then
             local success, data = pcall(chunk)
-            if success and data then db = data else db = getDefaultData() end
-        else db = getDefaultData() end
-    else db = getDefaultData() saveData() end
+            if success and data then
+                db = data
+            else
+                db = getDefaultData()
+            end
+        else
+            db = getDefaultData()
+        end
+    else
+        db = getDefaultData()
+        saveData()
+    end
 end
 
 function getDefaultData()
-    return {{name = "My Project", actors = {{name = "Cat", color = {1, 0.5, 0}, scripts = {}},{name = "Ball", color = {0.3, 0.6, 1}, scripts = {}}}}}
+    return {
+        {name = "My Project", actors = {
+            {name = "Cat", color = {1, 0.5, 0}, scripts = {}},
+            {name = "Ball", color = {0.3, 0.6, 1}, scripts = {}}
+        }}
+    }
 end
 
 function saveData()
@@ -117,7 +133,9 @@ function serialize(t)
     if type(t) == "table" then
         local str = "{"
         for k, v in pairs(t) do
-            if type(k) == "string" then str = str .. "[\"" .. escapeString(k) .. "\"]=" end
+            if type(k) == "string" then
+                str = str .. "[\"" .. escapeString(k) .. "\"]="
+            end
             str = str .. serialize(v) .. ","
         end
         return str .. "}"
@@ -155,7 +173,7 @@ end
 
 function love.load()
     love.window.setMode(800, 600, {resizable = true, vsync = true, minwidth = 400, minheight = 300})
-    love.window.setTitle("Pocket Code Hybrid Final")
+    love.window.setTitle("Pocket Code")
     love.graphics.setDefaultFilter("nearest", "nearest")
     
     local font_path = "Schulevetica-Regular.otf"
@@ -186,43 +204,71 @@ function love.load()
 end
 
 function love.update(dt)
-    if state.is_running then updateGame(dt) end
+    if state.is_running then
+        updateGame(dt)
+    end
 end
 
 function love.draw()
     love.graphics.clear(colors.bg)
-    if state.current_screen == "home" then drawHome()
-    elseif state.current_screen == "projects" then drawProjects()
-    elseif state.current_screen == "actors" then drawActors()
-    elseif state.current_screen == "editor" then drawEditor()
-    elseif state.current_screen == "categories" then drawCategories()
-    elseif state.current_screen == "picker" then drawPicker()
-    elseif state.current_screen == "stage" then drawStage() end
-    if state.show_modal then drawModal() end
+    if state.current_screen == "home" then
+        drawHome()
+    elseif state.current_screen == "projects" then
+        drawProjects()
+    elseif state.current_screen == "actors" then
+        drawActors()
+    elseif state.current_screen == "editor" then
+        drawEditor()
+    elseif state.current_screen == "categories" then
+        drawCategories()
+    elseif state.current_screen == "picker" then
+        drawPicker()
+    elseif state.current_screen == "stage" then
+        drawStage()
+    end
+    if state.show_modal then
+        drawModal()
+    end
 end
 
 function love.wheelmoved(dx, dy)
     state.scroll_offset = state.scroll_offset - dy * 20
-    if state.scroll_offset < 0 then state.scroll_offset = 0 end
+    if state.scroll_offset < 0 then
+        state.scroll_offset = 0
+    end
 end
 
 function love.mousepressed(x, y, button)
-    if button == 1 then handleClick(x, y) end
+    if button == 1 then
+        handleClick(x, y)
+    end
 end
 
 function handleClick(x, y)
-    if state.show_modal then handleModalClick(x, y) return end
-    if state.current_screen == "home" then handleHomeClick(x, y)
-    elseif state.current_screen == "projects" then handleProjectsClick(x, y)
-    elseif state.current_screen == "actors" then handleActorsClick(x, y)
-    elseif state.current_screen == "editor" then handleEditorClick(x, y)
-    elseif state.current_screen == "categories" then handleCategoriesClick(x, y)
-    elseif state.current_screen == "picker" then handlePickerClick(x, y)
-    elseif state.current_screen == "stage" then handleStageClick(x, y) end
+    if state.show_modal then
+        handleModalClick(x, y)
+        return
+    end
+    if state.current_screen == "home" then
+        handleHomeClick(x, y)
+    elseif state.current_screen == "projects" then
+        handleProjectsClick(x, y)
+    elseif state.current_screen == "actors" then
+        handleActorsClick(x, y)
+    elseif state.current_screen == "editor" then
+        handleEditorClick(x, y)
+    elseif state.current_screen == "categories" then
+        handleCategoriesClick(x, y)
+    elseif state.current_screen == "picker" then
+        handlePickerClick(x, y)
+    elseif state.current_screen == "stage" then
+        handleStageClick(x, y)
+    end
 end
 
 function drawHome()
-    local w, h = love.graphics.getWidth(), love.graphics.getHeight()
+    local w = love.graphics.getWidth()
+    local h = love.graphics.getHeight()
     love.graphics.setColor(colors.header)
     love.graphics.rectangle("fill", 0, 0, w, 60)
     love.graphics.setColor(colors.text)
@@ -232,13 +278,14 @@ function drawHome()
     love.graphics.rectangle("fill", 0, 60, w, 180)
     love.graphics.setColor(colors.text)
     love.graphics.setLineWidth(4)
-    local cx, cy = w/2, 150
+    local cx = w / 2
+    local cy = 150
     love.graphics.circle("line", cx, cy, 35)
     love.graphics.line(cx - 12, cy - 12, cx + 12, cy + 12)
     love.graphics.setLineWidth(1)
     local items = {"projects", "help", "community"}
     for i, key in ipairs(items) do
-        local y = 260 + (i-1) * 70
+        local y = 260 + (i - 1) * 70
         love.graphics.setColor({0.1, 0.2, 0.25, 0.3})
         love.graphics.rectangle("fill", 0, y, w, 69)
         love.graphics.setColor(colors.text)
@@ -259,14 +306,15 @@ function handleHomeClick(x, y)
 end
 
 function drawProjects()
-    local w, h = love.graphics.getWidth(), love.graphics.getHeight()
+    local w = love.graphics.getWidth()
+    local h = love.graphics.getHeight()
     drawHeader(getText("my_projects"), true)
     local cards_per_row = 2
     local card_w = (w - 45) / cards_per_row
     local card_h = card_w
     for i, project in ipairs(db) do
-        local col = (i-1) % cards_per_row
-        local row = math.floor((i-1) / cards_per_row)
+        local col = (i - 1) % cards_per_row
+        local row = math.floor((i - 1) / cards_per_row)
         local x = 15 + col * (card_w + 15)
         local y = 75 + row * (card_h + 15)
         love.graphics.setColor(colors.card_bg)
@@ -276,7 +324,9 @@ function drawProjects()
         love.graphics.setColor(colors.text)
         love.graphics.setFont(fonts.normal)
         local display_name = project.name or getText("project")
-        if #display_name > 15 then display_name = display_name:sub(1, 12) .. "..."
+        if #display_name > 15 then
+            display_name = display_name:sub(1, 12) .. "..."
+        end
         love.graphics.print(display_name, x + 10, y + card_h - 40)
         love.graphics.setColor({1, 0, 0, 0.5})
         love.graphics.circle("fill", x + card_w - 20, y + 20, 12)
@@ -294,14 +344,14 @@ function handleProjectsClick(x, y)
     local card_w = (w - 45) / cards_per_row
     local card_h = card_w
     for i, project in ipairs(db) do
-        local col = (i-1) % cards_per_row
-        local row = math.floor((i-1) / cards_per_row)
+        local col = (i - 1) % cards_per_row
+        local row = math.floor((i - 1) / cards_per_row)
         local card_x = 15 + col * (card_w + 15)
         local card_y = 75 + row * (card_h + 15)
         if x >= card_x and x <= card_x + card_w and y >= card_y and y <= card_y + card_h then
             local del_x = card_x + card_w - 20
             local del_y = card_y + 20
-            if math.sqrt((x - del_x)^2 + (y - del_y)^2) <= 12 then
+            if math.sqrt((x - del_x) ^ 2 + (y - del_y) ^ 2) <= 12 then
                 table.remove(db, i)
                 saveData()
                 return
@@ -313,14 +363,16 @@ function handleProjectsClick(x, y)
         end
     end
     checkFABClick(x, y)
-    if x >= 10 and x <= 50 and y >= 10 and y <= 50 then state.current_screen = "home" end
+    if x >= 10 and x <= 50 and y >= 10 and y <= 50 then
+        state.current_screen = "home"
+    end
 end
 
 function drawActors()
     local project = db[state.project_index]
     drawHeader(project.name or getText("objects"), true)
     for i, actor in ipairs(project.actors) do
-        local y = 75 + (i-1) * 70
+        local y = 75 + (i - 1) * 70
         love.graphics.setColor({0.1, 0.2, 0.25, 0.3})
         love.graphics.rectangle("fill", 0, y, love.graphics.getWidth(), 69)
         love.graphics.setColor(actor.color or {1, 0, 0})
@@ -341,10 +393,10 @@ end
 function handleActorsClick(x, y)
     local project = db[state.project_index]
     for i, actor in ipairs(project.actors) do
-        local y_pos = 75 + (i-1) * 70
+        local y_pos = 75 + (i - 1) * 70
         if x >= 0 and x <= love.graphics.getWidth() and y >= y_pos and y <= y_pos + 69 then
             local del_x = love.graphics.getWidth() - 30
-            if math.sqrt((x - del_x)^2 + (y - (y_pos + 35))^2) <= 12 then
+            if math.sqrt((x - del_x) ^ 2 + (y - (y_pos + 35)) ^ 2) <= 12 then
                 table.remove(project.actors, i)
                 saveData()
                 return
@@ -356,7 +408,9 @@ function handleActorsClick(x, y)
         end
     end
     checkFABClick(x, y)
-    if x >= 10 and x <= 50 and y >= 10 and y <= 50 then state.current_screen = "projects" end
+    if x >= 10 and x <= 50 and y >= 10 and y <= 50 then
+        state.current_screen = "projects"
+    end
 end
 
 function drawEditor()
@@ -365,7 +419,9 @@ function drawEditor()
     local y = 75 - state.scroll_offset
     for i, script in ipairs(actor.scripts or {}) do
         y = drawBrick(script, 0, y) + 5
-        if y > love.graphics.getHeight() + 100 then break end
+        if y > love.graphics.getHeight() + 100 then
+            break
+        end
     end
     local h = love.graphics.getHeight()
     love.graphics.setColor(colors.header)
@@ -399,17 +455,28 @@ function drawBrick(script, x, y)
     love.graphics.setColor(colors.text)
     love.graphics.setFont(fonts.normal)
     local display_text = script.text or getText("block")
-    if display_text == "Start" then display_text = getText("start")
-    elseif display_text == "Wait" then display_text = getText("wait")
-    elseif display_text == "Forever" then display_text = getText("forever")
-    elseif display_text == "Repeat" then display_text = getText("rep")
-    elseif display_text == "Change X" then display_text = getText("change_x")
-    elseif display_text == "Change Y" then display_text = getText("change_y")
-    elseif display_text == "Set X" then display_text = getText("set_x")
-    elseif display_text == "Set Y" then display_text = getText("set_y")
-    elseif display_text == "Rotate" then display_text = getText("rotate")
-    elseif display_text == "Size" then display_text = getText("change_size")
-    elseif display_text == "Set Size" then display_text = getText("set_size")
+    if display_text == "Start" then
+        display_text = getText("start")
+    elseif display_text == "Wait" then
+        display_text = getText("wait")
+    elseif display_text == "Forever" then
+        display_text = getText("forever")
+    elseif display_text == "Repeat" then
+        display_text = getText("rep")
+    elseif display_text == "Change X" then
+        display_text = getText("change_x")
+    elseif display_text == "Change Y" then
+        display_text = getText("change_y")
+    elseif display_text == "Set X" then
+        display_text = getText("set_x")
+    elseif display_text == "Set Y" then
+        display_text = getText("set_y")
+    elseif display_text == "Rotate" then
+        display_text = getText("rotate")
+    elseif display_text == "Size" then
+        display_text = getText("change_size")
+    elseif display_text == "Set Size" then
+        display_text = getText("set_size")
     end
     love.graphics.print(display_text, x + 75, y + 18)
     
@@ -486,7 +553,7 @@ function drawCategories()
         {name = "looks", color = colors.brick_looks}
     }
     for i, cat in ipairs(categories) do
-        local y = 75 + (i-1) * 80
+        local y = 75 + (i - 1) * 80
         love.graphics.setColor(cat.color)
         love.graphics.rectangle("fill", 0, y, love.graphics.getWidth(), 79)
         love.graphics.setColor(colors.text)
@@ -501,14 +568,16 @@ end
 function handleCategoriesClick(x, y)
     local categories = {"event", "control", "motion", "looks"}
     for i, cat in ipairs(categories) do
-        local y_pos = 75 + (i-1) * 80
+        local y_pos = 75 + (i - 1) * 80
         if x >= 0 and x <= love.graphics.getWidth() and y >= y_pos and y <= y_pos + 79 then
             state.picker_category = cat
             state.current_screen = "picker"
             return
         end
     end
-    if x >= 10 and x <= 50 and y >= 10 and y <= 50 then state.current_screen = "editor" end
+    if x >= 10 and x <= 50 and y >= 10 and y <= 50 then
+        state.current_screen = "editor"
+    end
 end
 
 function drawPicker()
@@ -522,17 +591,28 @@ function drawPicker()
         love.graphics.setColor(colors.text)
         love.graphics.setFont(fonts.normal)
         local display_text = block.text
-        if display_text == "Start" then display_text = getText("start")
-        elseif display_text == "Wait" then display_text = getText("wait")
-        elseif display_text == "Forever" then display_text = getText("forever")
-        elseif display_text == "Repeat" then display_text = getText("rep")
-        elseif display_text == "Change X" then display_text = getText("change_x")
-        elseif display_text == "Change Y" then display_text = getText("change_y")
-        elseif display_text == "Set X" then display_text = getText("set_x")
-        elseif display_text == "Set Y" then display_text = getText("set_y")
-        elseif display_text == "Rotate" then display_text = getText("rotate")
-        elseif display_text == "Size" then display_text = getText("change_size")
-        elseif display_text == "Set Size" then display_text = getText("set_size")
+        if display_text == "Start" then
+            display_text = getText("start")
+        elseif display_text == "Wait" then
+            display_text = getText("wait")
+        elseif display_text == "Forever" then
+            display_text = getText("forever")
+        elseif display_text == "Repeat" then
+            display_text = getText("rep")
+        elseif display_text == "Change X" then
+            display_text = getText("change_x")
+        elseif display_text == "Change Y" then
+            display_text = getText("change_y")
+        elseif display_text == "Set X" then
+            display_text = getText("set_x")
+        elseif display_text == "Set Y" then
+            display_text = getText("set_y")
+        elseif display_text == "Rotate" then
+            display_text = getText("rotate")
+        elseif display_text == "Size" then
+            display_text = getText("change_size")
+        elseif display_text == "Set Size" then
+            display_text = getText("set_size")
         end
         love.graphics.print(display_text, 35, y + 18)
         y = y + 66
@@ -546,8 +626,12 @@ function handlePickerClick(x, y)
         if x >= 20 and x <= 270 and y >= y_pos and y <= y_pos + 56 then
             local actor = db[state.project_index].actors[state.actor_index]
             local new_block = {id=block.id, text=block.text, cat=block.cat}
-            if block.val then new_block.val = block.val end
-            if block.isHeader then new_block.isHeader = true end
+            if block.val then
+                new_block.val = block.val
+            end
+            if block.isHeader then
+                new_block.isHeader = true
+            end
             if block.id == "ev_start" or block.id == "c_forever" or block.id == "c_repeat" then
                 new_block.children = {}
             end
@@ -558,7 +642,9 @@ function handlePickerClick(x, y)
         end
         y_pos = y_pos + 66
     end
-    if x >= 10 and x <= 50 and y >= 10 and y <= 50 then state.current_screen = "categories" end
+    if x >= 10 and x <= 50 and y >= 10 and y <= 50 then
+        state.current_screen = "categories"
+    end
 end
 
 function drawStage()
@@ -590,12 +676,15 @@ function drawHeader(title, show_back)
     love.graphics.rectangle("fill", 0, 0, w, 60)
     love.graphics.setColor(colors.text)
     love.graphics.setFont(fonts.title)
-    if show_back then love.graphics.print("<", 20, 15) end
+    if show_back then
+        love.graphics.print("<", 20, 15)
+    end
     love.graphics.print(title, show_back and 60 or 20, 18)
 end
 
 function drawFAB()
-    local w, h = love.graphics.getWidth(), love.graphics.getHeight()
+    local w = love.graphics.getWidth()
+    local h = love.graphics.getHeight()
     love.graphics.setColor(colors.fab)
     love.graphics.circle("fill", w - 45, h - 45, 35)
     love.graphics.setColor(colors.text)
@@ -605,9 +694,13 @@ function drawFAB()
 end
 
 function checkFABClick(x, y)
-    local w, h = love.graphics.getWidth(), love.graphics.getHeight()
-    local cx, cy = w - 45, h - 45
-    if math.sqrt((x - cx)^2 + (y - cy)^2) <= 35 then openModal("project") end
+    local w = love.graphics.getWidth()
+    local h = love.graphics.getHeight()
+    local cx = w - 45
+    local cy = h - 45
+    if math.sqrt((x - cx) ^ 2 + (y - cy) ^ 2) <= 35 then
+        openModal("project")
+    end
 end
 
 function openModal(mode)
@@ -622,7 +715,8 @@ function closeModal()
 end
 
 function drawModal()
-    local w, h = love.graphics.getWidth(), love.graphics.getHeight()
+    local w = love.graphics.getWidth()
+    local h = love.graphics.getHeight()
     love.graphics.setColor({0, 0, 0, 0.8})
     love.graphics.rectangle("fill", 0, 0, w, h)
     love.graphics.setColor({0.259, 0.259, 0.259})
@@ -642,7 +736,8 @@ function drawModal()
 end
 
 function handleModalClick(x, y)
-    local w, h = love.graphics.getWidth(), love.graphics.getHeight()
+    local w = love.graphics.getWidth()
+    local h = love.graphics.getHeight()
     if x >= w/2 + 140 and x <= w/2 + 200 and y >= 310 and y <= 350 then
         if #state.modal_input > 0 then
             if state.modal_mode == "project" then
@@ -661,11 +756,15 @@ function handleModalClick(x, y)
             closeModal()
         end
     end
-    if x >= w/2 + 20 and x <= w/2 + 120 and y >= 310 and y <= 350 then closeModal() end
+    if x >= w/2 + 20 and x <= w/2 + 120 and y >= 310 and y <= 350 then
+        closeModal()
+    end
 end
 
 function love.textinput(text)
-    if state.show_modal then state.modal_input = state.modal_input .. text end
+    if state.show_modal then
+        state.modal_input = state.modal_input .. text
+    end
 end
 
 function love.keypressed(key)
@@ -692,8 +791,11 @@ function love.keypressed(key)
         end
     end
     if key == "escape" then
-        if state.current_screen == "stage" then stopGame()
-        elseif state.show_modal then closeModal() end
+        if state.current_screen == "stage" then
+            stopGame()
+        elseif state.show_modal then
+            closeModal()
+        end
     end
 end
 
@@ -702,7 +804,8 @@ function playGame()
     state.current_screen = "stage"
     state.game_actors = {}
     local project = db[state.project_index]
-    local w, h = love.graphics.getWidth(), love.graphics.getHeight()
+    local w = love.graphics.getWidth()
+    local h = love.graphics.getHeight()
     for _, actor in ipairs(project.actors) do
         table.insert(state.game_actors, {
             name = actor.name,
@@ -724,37 +827,57 @@ function stopGame()
     state.current_screen = "editor"
 end
 
-function updateGame(dt) end
+function updateGame(dt)
+end
 
 function runCode(actor, scripts)
     for i, script in ipairs(scripts) do
-        if not state.is_running then return end
-        if script.id == "m_x" then actor.x = actor.x + (script.val or 30)
-        elseif script.id == "m_y" then actor.y = actor.y - (script.val or 30)
-        elseif script.id == "m_rot" then actor.r = actor.r + (script.val or 15)
-        elseif script.id == "m_setx" then actor.x = love.graphics.getWidth()/2 + (script.val or 0)
-        elseif script.id == "m_sety" then actor.y = love.graphics.getHeight()/2 - (script.val or 0)
-        elseif script.id == "l_size" then actor.s = actor.s + (script.val or 10)/100
-        elseif script.id == "l_setsize" then actor.s = (script.val or 100)/100
+        if not state.is_running then
+            return
+        end
+        if script.id == "m_x" then
+            actor.x = actor.x + (script.val or 30)
+        elseif script.id == "m_y" then
+            actor.y = actor.y - (script.val or 30)
+        elseif script.id == "m_rot" then
+            actor.r = actor.r + (script.val or 15)
+        elseif script.id == "m_setx" then
+            actor.x = love.graphics.getWidth()/2 + (script.val or 0)
+        elseif script.id == "m_sety" then
+            actor.y = love.graphics.getHeight()/2 - (script.val or 0)
+        elseif script.id == "l_size" then
+            actor.s = actor.s + (script.val or 10)/100
+        elseif script.id == "l_setsize" then
+            actor.s = (script.val or 100)/100
         elseif script.id == "c_wait" then
             local wait_time = (script.val or 1)
             local timer = 0
             while timer < wait_time do
-                if not state.is_running then return end
+                if not state.is_running then
+                    return
+                end
                 love.timer.sleep(0.016)
                 timer = timer + 0.016
             end
         elseif script.id == "ev_start" then
-            if script.children then runCode(actor, script.children) end
+            if script.children then
+                runCode(actor, script.children)
+            end
         elseif script.id == "c_forever" then
             while state.is_running do
-                if script.children then runCode(actor, script.children) end
+                if script.children then
+                    runCode(actor, script.children)
+                end
                 love.timer.sleep(0.016)
             end
         elseif script.id == "c_repeat" then
             for n = 1, (script.val or 5) do
-                if not state.is_running then return end
-                if script.children then runCode(actor, script.children) end
+                if not state.is_running then
+                    return
+                end
+                if script.children then
+                    runCode(actor, script.children)
+                end
                 love.timer.sleep(0.01)
             end
         end
